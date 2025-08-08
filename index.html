@@ -12,19 +12,20 @@
     <style>
       html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #0e0f14; color: #f3f4f6; }
       #app { min-height: 100%; display: grid; grid-template-rows: auto 1fr auto; }
-      header, footer { padding: 12px 16px; background: #12131a; border-bottom: 1px solid #1f2330; }
+      header, footer { padding: 12px 16px; background: linear-gradient(180deg,#12131a,#0e1019); border-bottom: 1px solid #1f2330; }
       footer { border-top: 1px solid #1f2330; border-bottom: none; }
       .container { max-width: 1100px; margin: 0 auto; padding: 12px 16px; }
       .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
-      .card { background:#151826; border:1px solid #23283b; border-radius: 14px; padding: 12px; display:flex; flex-direction:column; gap:10px; }
+      .card { background: radial-gradient(1200px 900px at 10% -10%, rgba(96,165,250,0.08), transparent 50%), radial-gradient(800px 700px at 110% 0%, rgba(248,113,113,0.06), transparent 55%), #151826; border:1px solid #23283b; border-radius: 14px; padding: 12px; display:flex; flex-direction:column; gap:10px; }
       .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; background:#2a3150; color:#fff; text-decoration:none; border:none; cursor:pointer; }
       .btn.secondary { background:#1f2438; }
       .pill { font-size:12px; color:#9aa3b2; }
-      .game-canvas { background:#0a0b10; border:1px solid #23283b; border-radius: 10px; width:100%; height:100%; }
+      .game-canvas { background: repeating-linear-gradient(0deg, #0a0b10, #0a0b10 22px, #10121b 22px, #10121b 44px), repeating-linear-gradient(90deg, transparent, transparent 22px, rgba(255,255,255,0.04) 22px, rgba(255,255,255,0.04) 23px); border:1px solid #23283b; border-radius: 10px; width:100%; height:100%; }
       .controls { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
       .hidden { display:none; }
       .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; }
       .title { font-weight:700; }
+      .overlay-card { background: rgba(17,20,31,0.88); border:1px solid #2a3150; border-radius:14px; padding:16px; }
     </style>
   </head>
   <body>
@@ -33,7 +34,7 @@
         <div class="container topbar">
           <div class="title">🕹️ Nostalgia Arcade</div>
           <nav>
-            <button id="installPwaBtn" class="btn secondary hidden">Install</button>
+            
           </nav>
         </div>
       </header>

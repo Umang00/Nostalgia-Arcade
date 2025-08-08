@@ -321,12 +321,15 @@ export class TetrisGame extends BaseGame {
       if (this.active.y + c.y >= this.hiddenRows) ctx.fillRect(px, py, this.grid - 1, this.grid - 1);
     }
 
-    // next preview (overlay in top-right of canvas area without shrinking board)
-    const previewGrid = Math.max(10, this.grid - 8);
-    const previewPad = 6;
+    // next preview (outside main grid area: draw in a reserved overlay area at top-right
+    const previewGrid = Math.max(10, Math.floor(this.grid * 0.85));
+    const previewPad = 8;
     const previewX = width - previewGrid * 4 - previewPad;
     const previewY = previewPad;
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.save();
+    // clear a rectangle to visually sit on top of board
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
     ctx.fillRect(previewX, previewY, previewGrid * 4, previewGrid * 4);
     const nextDef = getDefinition(this.nextShape);
     ctx.fillStyle = nextDef.color;
@@ -337,6 +340,7 @@ export class TetrisGame extends BaseGame {
       const ny = offsetY + c.y * previewGrid - previewGrid / 2;
       ctx.fillRect(nx, ny, previewGrid - 2, previewGrid - 2);
     }
+    ctx.restore();
   }
 }
 

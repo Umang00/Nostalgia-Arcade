@@ -10,8 +10,11 @@ initRouter({
   '/game/:id': initGameRoute
 });
 
-// PWA install button handling
-registerPWAInstallPrompt(document.getElementById('installPwaBtn') as HTMLButtonElement);
+// PWA install button handling (optional)
+const installBtn = document.getElementById('installPwaBtn');
+if (installBtn instanceof HTMLButtonElement) {
+  registerPWAInstallPrompt(installBtn);
+}
 
 // Service Worker
 if ('serviceWorker' in navigator) {
