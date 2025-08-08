@@ -87,6 +87,24 @@ export function initGameRoute(params?: Record<string,string>) {
     const t = e.target as HTMLElement; if (t && t.id === 'btnCloseHelp') pop.classList.add('hidden');
   });
 
+  // Pre-game splash overlay
+  const splash = document.createElement('div');
+  splash.className = 'overlay-card';
+  splash.style.position = 'absolute';
+  splash.style.left = '50%';
+  splash.style.top = '50%';
+  splash.style.transform = 'translate(-50%,-50%)';
+  splash.style.zIndex = '7';
+  splash.innerHTML = `
+    <div style="font-size:20px; font-weight:800; text-align:center; margin-bottom:8px;">Tetris</div>
+    <div style="text-align:center; color:#9aa3b2; margin-bottom:8px;">Stack tetrominoes to clear lines. Reach higher levels!</div>
+    <div style="display:flex; gap:8px; justify-content:center; margin-bottom:8px;">
+      <button id="btnSplashPlay" class="btn">Play</button>
+      <button id="btnSplashHelp" class="btn secondary">How to play</button>
+    </div>
+  `;
+  document.getElementById('game-wrap')!.appendChild(splash);
+
   let score = 0;
   const scoreEl = document.getElementById('score')!;
   let paused = false;
@@ -152,6 +170,16 @@ export function initGameRoute(params?: Record<string,string>) {
   document.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
     if (t && t.id === 'btnPlayAgain') onPlayAgain();
+  });
+  // Splash actions
+  document.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    if (t && t.id === 'btnSplashPlay') {
+      splash.remove(); game.reset(); game.start();
+      audio.startGameMusic();
+    } else if (t && t.id === 'btnSplashHelp') {
+      pop.classList.remove('hidden');
+    }
   });
   document.getElementById('btnShare')!.addEventListener('click', async () => {
     const pretty = id === 'tetris' ? 'Tetris' : id === 'snake' ? 'Snake' : id;

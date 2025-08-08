@@ -66,6 +66,26 @@ export class TetrisGame extends BaseGame {
     this.reset();
   }
 
+  // Public: allow host to render Next/Level/Lines in a DOM sidebar outside the canvas
+  attachSidebar(el: HTMLElement) {
+    this.sidebarEl = el;
+    el.innerHTML = '';
+    const title = document.createElement('div');
+    title.textContent = 'Next';
+    title.style.opacity = '0.9';
+    title.style.marginBottom = '6px';
+    el.appendChild(title);
+    const pv = document.createElement('canvas');
+    pv.width = 96; pv.height = 96; pv.style.background = 'rgba(255,255,255,0.06)'; pv.style.borderRadius = '8px';
+    el.appendChild(pv);
+    this.previewCanvas = pv;
+    this.previewCtx = pv.getContext('2d') || undefined;
+    const stats = document.createElement('div');
+    stats.id = 'tetris-stats'; stats.style.marginTop = '8px'; stats.style.lineHeight = '1.3';
+    el.appendChild(stats);
+    this.updateSidebar();
+  }
+
   start() {
     if (this.running) return;
     this.paused = false; this.over = false; this.running = true;
@@ -167,6 +187,7 @@ export class TetrisGame extends BaseGame {
     if (this.collides(this.active, 0, 0)) {
       this.gameOver();
     }
+    this.updateSidebar();
   }
 
   private gameOver() {
@@ -242,6 +263,7 @@ export class TetrisGame extends BaseGame {
       this.level = upd.level; this.totalLines = upd.totalLines;
     }
     this.spawn();
+    this.updateSidebar();
   }
 
   /** Returns number of lines cleared. */
@@ -359,33 +381,50 @@ export class TetrisGame extends BaseGame {
       if (this.active.y + c.y >= this.hiddenRows) ctx.fillRect(px, py, this.grid - 1, this.grid - 1);
     }
 
-    // next preview (outside main grid area: draw in a reserved overlay area at top-right
-    const previewGrid = Math.max(10, Math.floor(this.grid * 0.85));
-    const previewPad = 8;
-    const previewX = width - previewGrid * 4 - previewPad;
-    const previewY = previewPad;
-    ctx.save();
-    // clear a rectangle to visually sit on top of board
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = 'rgba(255,255,255,0.06)';
-    ctx.fillRect(previewX, previewY, previewGrid * 4, previewGrid * 4);
-    const nextDef = getDefinition(this.nextShape);
-    ctx.fillStyle = nextDef.color;
-    const offsetX = previewX + previewGrid * 2;
-    const offsetY = previewY + previewGrid * 2;
-    for (const c of nextDef.cells) {
-      const nx = offsetX + c.x * previewGrid - previewGrid / 2;
-      const ny = offsetY + c.y * previewGrid - previewGrid / 2;
-      ctx.fillRect(nx, ny, previewGrid - 2, previewGrid - 2);
+    // If no sidebar attached, draw a compact preview and stats on canvas
+    if (!this.sidebarEl) {
+      const previewGrid = Math.max(10, Math.floor(this.grid * 0.85));
+      const previewPad = 8;
+      const previewX = width - previewGrid * 4 - previewPad;
+      const previewY = previewPad;
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.fillRect(previewX, previewY, previewGrid * 4, previewGrid * 4);
+      const nextDef = getDefinition(this.nextShape);
+      ctx.fillStyle = nextDef.color;
+      const offsetX = previewX + previewGrid * 2;
+      const offsetY = previewY + previewGrid * 2;
+      for (const c of nextDef.cells) {
+        const nx = offsetX + c.x * previewGrid - previewGrid / 2;
+        const ny = offsetY + c.y * previewGrid - previewGrid / 2;
+        ctx.fillRect(nx, ny, previewGrid - 2, previewGrid - 2);
+      }
+      ctx.restore();
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.font = `${Math.max(10, Math.floor(this.grid * 0.6))}px system-ui, sans-serif`;
+      ctx.textAlign = 'right';
+      ctx.fillText(`LV ${this.level}`, width - 10, previewY + previewGrid * 4 + 18);
+      ctx.fillText(`${this.totalLines} lines`, width - 10, previewY + previewGrid * 4 + 18 + Math.max(12, Math.floor(this.grid * 0.7)));
     }
-    ctx.restore();
+  }
 
-    // Sidebar HUD: level and lines (outside grid under preview)
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.font = `${Math.max(10, Math.floor(this.grid * 0.6))}px system-ui, sans-serif`;
-    ctx.textAlign = 'right';
-    ctx.fillText(`LV ${this.level}`, width - 10, previewY + previewGrid * 4 + 18);
-    ctx.fillText(`${this.totalLines} lines`, width - 10, previewY + previewGrid * 4 + 18 + Math.max(12, Math.floor(this.grid * 0.7)));
+  private updateSidebar() {
+    if (!this.sidebarEl) return;
+    const stats = this.sidebarEl.querySelector('#tetris-stats') as HTMLElement | null;
+    if (stats) stats.innerHTML = `LV ${this.level}<br/>${this.totalLines} lines`;
+    if (!this.previewCanvas || !this.previewCtx) return;
+    const pv = this.previewCanvas; const pctx = this.previewCtx;
+    pctx!.clearRect(0,0,pv!.width,pv!.height);
+    const grid = Math.floor(pv!.width/4);
+    const def = getDefinition(this.nextShape);
+    pctx!.fillStyle = def.color;
+    const cx = pv!.width/2, cy = pv!.height/2;
+    for (const c of def.cells) {
+      const x = cx + c.x*grid - grid/2;
+      const y = cy + c.y*grid - grid/2;
+      pctx!.fillRect(x, y, grid-4, grid-4);
+    }
   }
 }
 
