@@ -30,6 +30,16 @@ export class TetrisGame extends BaseGame {
   private running = false;
   private paused = false;
   private over = false;
+  // DAS / ARR state
+  private leftHeld = false;
+  private rightHeld = false;
+  private dasTimer = 0;
+  private arrTimer = 0;
+  private readonly dasMs = 160;
+  private readonly arrMs = 35;
+  // Lock delay
+  private lockDelayMs = 500;
+  private lastGroundTime = 0;
   private level = 0;
   private totalLines = 0;
   private score = 0;
@@ -46,6 +56,7 @@ export class TetrisGame extends BaseGame {
     addEventListener('resize', () => this.onResize());
 
     addEventListener('keydown', this.onKey);
+    addEventListener('keyup', this.onKeyUp);
     addEventListener('virtual-direction', this.onVirtual as EventListener);
     this.canvas.addEventListener('click', this.touchRotateListener);
 
@@ -64,11 +75,11 @@ export class TetrisGame extends BaseGame {
       // gravity
       const gInterval = gravityIntervalMs(this.level);
       if (t - this.lastGravity >= gInterval) {
-        if (!this.tryMove(0, 1)) {
-          this.lockPiece();
-        }
+        if (!this.tryMove(0, 1)) this.maybeLock(t);
         this.lastGravity = t;
       }
+      // DAS/ARR auto-shift
+      this.handleAutoShift(t);
       // redraw at ~60fps
       if (t - this.lastFrame >= 16) { this.draw(); this.lastFrame = t; }
     };
@@ -96,6 +107,7 @@ export class TetrisGame extends BaseGame {
   destroy() {
     cancelAnimationFrame(this.raf);
     removeEventListener('keydown', this.onKey);
+    removeEventListener('keyup', this.onKeyUp);
     removeEventListener('virtual-direction', this.onVirtual as EventListener);
     this.canvas.removeEventListener('click', this.touchRotateListener);
     this.container.innerHTML = '';
@@ -110,12 +122,16 @@ export class TetrisGame extends BaseGame {
   };
 
   private onKey = (e: KeyboardEvent) => {
-    if (e.code === 'ArrowLeft') this.move(-1);
-    else if (e.code === 'ArrowRight') this.move(1);
+    if (e.code === 'ArrowLeft') { this.leftHeld = true; this.rightHeld = false; this.dasTimer = performance.now(); this.move(-1); }
+    else if (e.code === 'ArrowRight') { this.rightHeld = true; this.leftHeld = false; this.dasTimer = performance.now(); this.move(1); }
     else if (e.code === 'ArrowDown') this.softDrop();
     else if (e.code === 'ArrowUp') this.rotate();
     else if (e.code === 'Space') this.hardDrop();
     else if (e.code === 'KeyP') this.paused ? this.resume() : this.pause();
+  };
+  private onKeyUp = (e: KeyboardEvent) => {
+    if (e.code === 'ArrowLeft') this.leftHeld = false;
+    else if (e.code === 'ArrowRight') this.rightHeld = false;
   };
 
   private onResize() {
@@ -182,8 +198,9 @@ export class TetrisGame extends BaseGame {
         audio.play('drop');
         // encourage faster descent by resetting gravity so user input feels responsive
         this.lastGravity = performance.now();
+        this.lastGroundTime = 0;
       } else {
-        this.lockPiece();
+        this.maybeLock(performance.now());
       }
     }
   }
@@ -257,6 +274,23 @@ export class TetrisGame extends BaseGame {
       if (y >= 0 && this.board[y][x].filled) return true;
     }
     return false;
+  }
+
+  private isGrounded(): boolean { return this.collides(this.active, 0, 1); }
+  private maybeLock(now: number) {
+    if (!this.isGrounded()) { this.lastGroundTime = 0; return; }
+    if (!this.lastGroundTime) this.lastGroundTime = now;
+    if (now - this.lastGroundTime >= this.lockDelayMs) this.lockPiece();
+  }
+  private handleAutoShift(now: number) {
+    const held = this.leftHeld || this.rightHeld;
+    if (!held) { this.arrTimer = 0; return; }
+    const dir = this.leftHeld ? -1 : 1;
+    if (now - this.dasTimer < this.dasMs) return;
+    if (!this.arrTimer || now - this.arrTimer >= this.arrMs) {
+      this.move(dir);
+      this.arrTimer = now;
+    }
   }
 
   private computeGhostY(): number {
@@ -342,6 +376,13 @@ export class TetrisGame extends BaseGame {
       ctx.fillRect(nx, ny, previewGrid - 2, previewGrid - 2);
     }
     ctx.restore();
+
+    // Sidebar HUD: level and lines (outside grid under preview)
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = `${Math.max(10, Math.floor(this.grid * 0.6))}px system-ui, sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.fillText(`LV ${this.level}`, width - 10, previewY + previewGrid * 4 + 18);
+    ctx.fillText(`${this.totalLines} lines`, width - 10, previewY + previewGrid * 4 + 18 + Math.max(12, Math.floor(this.grid * 0.7)));
   }
 }
 

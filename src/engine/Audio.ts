@@ -8,6 +8,8 @@ class AudioManager {
   private muted = false;
   private volume = 0.5; // 0..1
   private musicTimer: number | null = null;
+  private musicPattern: number[] = [];
+  private musicIntervalMs = 180;
 
   private ensure() {
     if (this.ctx) return;
@@ -81,19 +83,38 @@ class AudioManager {
   }
 
   startMusic() {
-    this.ensure();
-    if (!this.ctx || this.musicTimer) return;
-    // Simple looping chiptune arpeggio
-    const pattern = [523, 659, 784, 659, 523, 587, 698, 587]; // C5 E5 G5 ...
-    let i = 0;
-    this.musicTimer = window.setInterval(() => {
-      if (this.muted) return;
-      this.tone(pattern[i % pattern.length], 140, 'triangle', 0.08, true);
-      i++;
-    }, 180);
+    this.startGameMusic();
   }
   stopMusic() {
     if (this.musicTimer) { clearInterval(this.musicTimer); this.musicTimer = null; }
+  }
+
+  private startLoop(pattern: number[], intervalMs: number, gain = 0.08, type: OscillatorType = 'triangle') {
+    this.ensure();
+    if (!this.ctx) return;
+    this.stopMusic();
+    this.musicPattern = pattern;
+    this.musicIntervalMs = intervalMs;
+    let i = 0;
+    this.musicTimer = window.setInterval(() => {
+      if (this.muted) return;
+      const f = this.musicPattern[i % this.musicPattern.length];
+      this.tone(f, Math.max(120, intervalMs - 40), type, gain, true);
+      i++;
+    }, intervalMs);
+  }
+
+  startMenuMusic() {
+    // Calm arpeggio
+    this.startLoop([440, 554, 659, 554, 440, 494, 587, 494], 220, 0.07, 'triangle');
+  }
+  startGameMusic() {
+    // Energetic loop
+    this.startLoop([523, 659, 784, 659, 698, 880, 784, 659], 170, 0.09, 'square');
+  }
+  startGameOverMusic() {
+    // Minor descent
+    this.startLoop([523, 494, 440, 392, 349], 260, 0.06, 'triangle');
   }
 }
 

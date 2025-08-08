@@ -18,6 +18,7 @@ export function initGameRoute(params?: Record<string,string>) {
           <button id="btnReset" class="btn secondary">Reset</button>
           <button id="btnMute" class="btn secondary">Mute</button>
           <input id="rangeVol" type="range" min="0" max="1" step="0.01" style="width:120px;" />
+          <button id="btnHelp" class="btn secondary">?</button>
         </div>
       </div>
       <div id="canvasHost" style="flex:1; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden;"></div>
@@ -41,6 +42,7 @@ export function initGameRoute(params?: Record<string,string>) {
   const host = document.getElementById('canvasHost')!;
   const game = loadGame(id);
   game.init(host);
+  audio.startGameMusic();
   // In-game audio controls
   const muteBtn = document.getElementById('btnMute') as HTMLButtonElement;
   const volRng = document.getElementById('rangeVol') as HTMLInputElement;
@@ -49,6 +51,30 @@ export function initGameRoute(params?: Record<string,string>) {
   volRng.value = String(audio.getVolume());
   muteBtn.addEventListener('click', () => { audio.setMuted(!audio.isMuted()); updateMute(); });
   volRng.addEventListener('input', () => audio.setVolume(Number(volRng.value)));
+
+  // Help popover
+  const helpBtn = document.getElementById('btnHelp') as HTMLButtonElement;
+  const pop = document.createElement('div');
+  pop.className = 'overlay-card hidden';
+  pop.style.position = 'absolute';
+  pop.style.right = '16px';
+  pop.style.top = '60px';
+  pop.style.zIndex = '6';
+  pop.innerHTML = `
+    <div style="font-weight:700; margin-bottom:6px;">How to play</div>
+    <ul style="margin:0 0 8px 16px; padding:0; line-height:1.4;">
+      <li>←/→ to move, ↑ rotate, ↓ soft drop, Space hard drop, P pause</li>
+      <li>Tap canvas to rotate; hold ↓ for fast soft drop</li>
+      <li>Lines: 100/300/500/800 • Soft +1/cell • Hard +2/cell</li>
+      <li>Level up every 10 lines; gravity speeds up</li>
+    </ul>
+    <div style="text-align:right"><button id="btnCloseHelp" class="btn secondary">Close</button></div>
+  `;
+  document.getElementById('game-wrap')!.appendChild(pop);
+  helpBtn.addEventListener('click', () => pop.classList.toggle('hidden'));
+  pop.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement; if (t && t.id === 'btnCloseHelp') pop.classList.add('hidden');
+  });
 
   let score = 0;
   const scoreEl = document.getElementById('score')!;
