@@ -1,6 +1,7 @@
 import { BaseGame } from '../../engine/GameHost';
 import { Cell, SevenBag, ShapeName, WALL_KICK_OFFSETS, getDefinition, rotateCw } from './tetromino';
 import { gravityIntervalMs, scoreForLines, scoreHardDrop, scoreSoftDrop, updateLevel } from './scoring';
+import { audio } from '../../engine/Audio';
 
 type BoardCell = { filled: boolean; color: string };
 
@@ -167,7 +168,7 @@ export class TetrisGame extends BaseGame {
     const candidate: ActivePiece = { ...this.active, cells: rotated };
     for (const off of WALL_KICK_OFFSETS) {
       if (!this.collides(candidate, off.x, off.y)) {
-        this.active.cells = rotated; this.active.x += off.x; this.active.y += off.y; return;
+        this.active.cells = rotated; this.active.x += off.x; this.active.y += off.y; audio.play('rotate'); return;
       }
     }
   }
@@ -177,6 +178,7 @@ export class TetrisGame extends BaseGame {
     if (!this.over && !this.paused) {
       if (this.tryMove(0, 1)) {
         this.incrementScore(scoreSoftDrop(1));
+        audio.play('drop');
         // encourage faster descent by resetting gravity so user input feels responsive
         this.lastGravity = performance.now();
       } else {
@@ -191,6 +193,7 @@ export class TetrisGame extends BaseGame {
     let steps = 0;
     while (this.tryMove(0, 1)) steps++;
     if (steps > 0) this.incrementScore(scoreHardDrop(steps));
+    audio.play('hard');
     this.lockPiece();
   }
 
@@ -213,6 +216,7 @@ export class TetrisGame extends BaseGame {
     if (cleared > 0) {
       const gained = scoreForLines(cleared);
       this.incrementScore(gained);
+      audio.play('clear');
       const upd = updateLevel(this.level, this.totalLines, cleared);
       this.level = upd.level; this.totalLines = upd.totalLines;
     }

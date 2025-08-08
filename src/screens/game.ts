@@ -1,6 +1,7 @@
 
 import { loadGame } from '../util/registry';
 import { track } from '../engine/Analytics';
+import { audio } from '../engine/Audio';
 
 export function initGameRoute(params?: Record<string,string>) {
   const id = params?.id || 'snake';
@@ -70,6 +71,8 @@ export function initGameRoute(params?: Record<string,string>) {
     }
     document.getElementById('endModal')!.classList.remove('hidden');
     track('game_end', { id, score });
+    audio.stopMusic();
+    audio.play('gameover');
   });
   game.on('share_payload', (payload:any) => {
     lastShareOverride = typeof payload === 'string' ? payload : payload?.text;
@@ -86,11 +89,13 @@ export function initGameRoute(params?: Record<string,string>) {
     score = 0; scoreEl.textContent = '0'; paused = false; btnPause.textContent = 'Pause';
     game.reset();
     game.start();
+    audio.startMusic();
   });
   document.getElementById('btnPlayAgain')!.addEventListener('click', () => {
     score = 0; scoreEl.textContent = '0'; paused = false; btnPause.textContent = 'Pause';
     (document.getElementById('endModal')!).classList.add('hidden');
     game.reset(); game.start();
+    audio.startMusic();
   });
   document.getElementById('btnShare')!.addEventListener('click', async () => {
     const pretty = id === 'tetris' ? 'Tetris' : id === 'snake' ? 'Snake' : id;
