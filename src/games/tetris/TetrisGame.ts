@@ -24,6 +24,9 @@ export class TetrisGame extends BaseGame {
   private bag = new SevenBag();
   private active!: ActivePiece;
   private nextShape!: ShapeName;
+  private sidebarEl?: HTMLElement;
+  private previewCanvas?: HTMLCanvasElement;
+  private previewCtx?: CanvasRenderingContext2D;
   private raf = 0;
   private lastFrame = 0;
   private lastGravity = 0;

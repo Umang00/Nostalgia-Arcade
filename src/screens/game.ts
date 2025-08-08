@@ -16,12 +16,16 @@ export function initGameRoute(params?: Record<string,string>) {
         <div class="controls">
           <button id="btnPause" class="btn secondary">Pause</button>
           <button id="btnReset" class="btn secondary">Reset</button>
+          <button id="btnShareTop" class="btn secondary">Share</button>
           <button id="btnMute" class="btn secondary">Mute</button>
           <input id="rangeVol" type="range" min="0" max="1" step="0.01" style="width:120px;" />
-          <button id="btnHelp" class="btn secondary">?</button>
+          <button id="btnHelp" class="btn secondary">How to play</button>
         </div>
       </div>
-      <div id="canvasHost" style="flex:1; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden;"></div>
+      <div style="flex:1; display:grid; grid-template-columns: 1fr 140px; gap:12px; min-height:0;">
+        <div id="canvasHost" style="position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden;"></div>
+        <div id="sidebar" class="card" style="display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start;"></div>
+      </div>
       <div id="centerOverlay" class="overlay-card hidden" style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:5;"></div>
       <div id="touchControls" class="controls" style="justify-content:center; margin-top:8px;">
         <button class="btn secondary" data-dir="up">↑</button>
@@ -40,9 +44,16 @@ export function initGameRoute(params?: Record<string,string>) {
   bestEl.textContent = String(Number(localStorage.getItem(bestKey) || '0'));
 
   const host = document.getElementById('canvasHost')!;
+  const sidebar = document.getElementById('sidebar')!;
   const game = loadGame(id);
   game.init(host);
   audio.startGameMusic();
+  // If Tetris exposes sidebar attachment, wire it
+  // @ts-ignore - only Tetris implements it
+  if (typeof (game as any).attachSidebar === 'function') {
+    // @ts-ignore
+    (game as any).attachSidebar(sidebar);
+  }
   // In-game audio controls
   const muteBtn = document.getElementById('btnMute') as HTMLButtonElement;
   const volRng = document.getElementById('rangeVol') as HTMLInputElement;
@@ -208,3 +219,4 @@ export function initGameRoute(params?: Record<string,string>) {
   game.start();
   track('game_start', { id });
 }
+
