@@ -20,7 +20,7 @@ export function initGameRoute(params?: Record<string,string>) {
           <input id="rangeVol" type="range" min="0" max="1" step="0.01" style="width:120px;" />
         </div>
       </div>
-      <div id="canvasHost" style="flex:1; position:relative; display:flex; align-items:center; justify-content:center;"></div>
+      <div id="canvasHost" style="flex:1; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden;"></div>
       <div id="centerOverlay" class="overlay-card hidden" style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:5;"></div>
       <div id="touchControls" class="controls" style="justify-content:center; margin-top:8px;">
         <button class="btn secondary" data-dir="up">↑</button>
@@ -130,18 +130,16 @@ export function initGameRoute(params?: Record<string,string>) {
     track('share_clicked', { id, score });
   });
 
-  // Additional copyable prompts for sharing
-  const sharePromptsHost = document.createElement('div');
-  sharePromptsHost.className = 'card';
-  sharePromptsHost.style.marginTop = '8px';
-  sharePromptsHost.innerHTML = `
-    <div style="font-weight:600; margin-bottom:6px;">Share prompts</div>
-    <div style="display:flex; gap:8px; flex-direction:column;">
-      <button class="btn secondary" id="copyPromptA">Copy: Just scored…</button>
-      <button class="btn secondary" id="copyPromptB">Copy: I'm loving…</button>
-    </div>
+  // Share button + prompts section beneath HUD
+  const shareBar = document.createElement('div');
+  shareBar.className = 'controls';
+  shareBar.style.marginTop = '6px';
+  shareBar.innerHTML = `
+    <button class="btn secondary" id="btnShare">Share score</button>
+    <button class="btn secondary" id="copyPromptA">Copy: Just scored…</button>
+    <button class="btn secondary" id="copyPromptB">Copy: I'm loving…</button>
   `;
-  document.getElementById('game-wrap')!.appendChild(sharePromptsHost);
+  document.getElementById('hud')!.after(shareBar);
   const copy = async (s:string) => { await navigator.clipboard.writeText(s); alert('Copied to clipboard!'); };
   document.getElementById('copyPromptA')!.addEventListener('click', () => {
     const pretty = id === 'tetris' ? 'Tetris' : id === 'snake' ? 'Snake' : id;

@@ -131,6 +131,7 @@ export class TetrisGame extends BaseGame {
     host.style.display = 'flex';
     host.style.alignItems = 'center';
     host.style.justifyContent = 'center';
+    host.style.overflow = 'hidden';
   }
 
   private spawn() {
