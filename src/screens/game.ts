@@ -22,9 +22,13 @@ export function initGameRoute(params?: Record<string,string>) {
           <button id="btnHelp" class="btn secondary">How to play</button>
         </div>
       </div>
-      <div style="flex:1; display:grid; grid-template-columns: 1fr 140px; gap:12px; min-height:0;">
+      <div style="flex:1; display:grid; grid-template-columns: 1fr 140px; gap:12px; min-height:0; align-items:stretch;">
         <div id="canvasHost" style="position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden;"></div>
-        <div id="sidebar" class="card" style="display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start;"></div>
+        <div id="sidebar" class="card" style="display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start;">
+          <div style="font-weight:700; margin-bottom:6px;">Hold</div>
+          <canvas id="holdCanvas" width="96" height="96" style="background:rgba(255,255,255,0.06); border-radius:8px; margin-bottom:10px;"></canvas>
+          <div id="sidebarDynamic"></div>
+        </div>
       </div>
       <div id="centerOverlay" class="overlay-card hidden" style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:5;"></div>
       <div id="touchControls" class="controls" style="justify-content:center; margin-top:8px;">

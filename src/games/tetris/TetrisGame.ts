@@ -47,6 +47,15 @@ export class TetrisGame extends BaseGame {
   private totalLines = 0;
   private score = 0;
   private touchRotateListener = (e: MouseEvent | TouchEvent) => { this.rotate(); };
+  // Options
+  private drawGhost = true;
+  private showNext = true;
+  // Hold mechanic
+  private holdShape: ShapeName | null = null;
+  private holdUsedThisDrop = false;
+  // Line clear animation
+  private pendingClearRows: number[] = [];
+  private clearUntil = 0;
 
   init(container: HTMLElement) {
     super.init(container);
@@ -70,6 +79,13 @@ export class TetrisGame extends BaseGame {
   attachSidebar(el: HTMLElement) {
     this.sidebarEl = el;
     el.innerHTML = '';
+    // Hold
+    const holdWrap = document.createElement('div');
+    const holdTitle = document.createElement('div'); holdTitle.textContent = 'Hold'; holdTitle.style.opacity = '0.9'; holdTitle.style.marginBottom = '6px';
+    const holdCanvas = document.createElement('canvas'); holdCanvas.width = 96; holdCanvas.height = 96; holdCanvas.style.background = 'rgba(255,255,255,0.06)'; holdCanvas.style.borderRadius = '8px';
+    holdWrap.appendChild(holdTitle); holdWrap.appendChild(holdCanvas);
+    el.appendChild(holdWrap);
+
     const title = document.createElement('div');
     title.textContent = 'Next';
     title.style.opacity = '0.9';
@@ -95,6 +111,10 @@ export class TetrisGame extends BaseGame {
       this.raf = requestAnimationFrame(loop);
       if (this.paused || this.over) return;
       if (!this.lastFrame) { this.lastFrame = t; this.lastGravity = t; this.draw(); return; }
+      // resolve pending line clear animation
+      if (this.clearUntil && t >= this.clearUntil) {
+        this.performRowClear();
+      }
       // gravity
       const gInterval = gravityIntervalMs(this.level);
       if (t - this.lastGravity >= gInterval) {
@@ -149,6 +169,7 @@ export class TetrisGame extends BaseGame {
     else if (e.code === 'ArrowRight') { this.rightHeld = true; this.leftHeld = false; this.dasTimer = performance.now(); this.move(1); }
     else if (e.code === 'ArrowDown') this.softDrop();
     else if (e.code === 'ArrowUp') this.rotate();
+    else if (e.code === 'ShiftLeft' || e.code === 'KeyC') this.hold();
     else if (e.code === 'Space') this.hardDrop();
     else if (e.code === 'KeyP') this.paused ? this.resume() : this.pause();
   };
@@ -184,6 +205,7 @@ export class TetrisGame extends BaseGame {
       y: 0,
       color: def.color
     };
+    this.holdUsedThisDrop = false;
     if (this.collides(this.active, 0, 0)) {
       this.gameOver();
     }
@@ -254,29 +276,37 @@ export class TetrisGame extends BaseGame {
       if (y >= this.board.length || x < 0 || x >= this.boardW) continue;
       this.board[y][x] = { filled: true, color: a.color };
     }
-    const cleared = this.clearLines();
+    // detect full rows; animate flash before clearing
+    this.pendingClearRows = this.findFullRows();
+    if (this.pendingClearRows.length > 0) {
+      this.clearUntil = performance.now() + 140;
+      audio.play('clear');
+    } else {
+      this.spawn();
+      this.updateSidebar();
+    }
+  }
+
+  /** Returns number of lines cleared. */
+  private performRowClear() {
+    this.clearUntil = 0;
+    const rows = this.pendingClearRows.slice().sort((a,b)=>a-b);
+    let cleared = rows.length;
+    for (const y of rows) this.removeLine(y);
+    this.pendingClearRows = [];
     if (cleared > 0) {
       const gained = scoreForLines(cleared);
       this.incrementScore(gained);
-      audio.play('clear');
       const upd = updateLevel(this.level, this.totalLines, cleared);
       this.level = upd.level; this.totalLines = upd.totalLines;
     }
     this.spawn();
     this.updateSidebar();
   }
-
-  /** Returns number of lines cleared. */
-  private clearLines(): number {
-    let cleared = 0;
-    for (let y = this.board.length - 1; y >= 0; y--) {
-      if (this.isLineFull(y)) {
-        this.removeLine(y);
-        cleared++;
-        y++; // re-check same y after shifting down
-      }
-    }
-    return cleared;
+  private findFullRows(): number[] {
+    const rows: number[] = [];
+    for (let y = 0; y < this.board.length; y++) if (this.isLineFull(y)) rows.push(y);
+    return rows;
   }
 
   private isLineFull(y: number): boolean {
@@ -359,18 +389,22 @@ export class TetrisGame extends BaseGame {
       for (let x = 0; x < this.boardW; x++) {
         const cell = this.board[y][x];
         if (!cell.filled) continue;
-        ctx.fillStyle = cell.color;
+        // flash animation for clearing rows
+        const flashing = this.pendingClearRows.includes(y);
+        ctx.fillStyle = flashing ? '#ffffff' : cell.color;
         ctx.fillRect(x * this.grid, (y - this.hiddenRows) * this.grid, this.grid - 1, this.grid - 1);
       }
     }
 
     // ghost piece
-    const ghostY = this.computeGhostY();
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    for (const c of this.active.cells) {
-      const gx = (this.active.x + c.x) * this.grid;
-      const gy = (ghostY + c.y - this.hiddenRows) * this.grid;
-      if (ghostY + c.y >= this.hiddenRows) ctx.fillRect(gx, gy, this.grid - 1, this.grid - 1);
+    if (this.drawGhost) {
+      const ghostY = this.computeGhostY();
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      for (const c of this.active.cells) {
+        const gx = (this.active.x + c.x) * this.grid;
+        const gy = (ghostY + c.y - this.hiddenRows) * this.grid;
+        if (ghostY + c.y >= this.hiddenRows) ctx.fillRect(gx, gy, this.grid - 1, this.grid - 1);
+      }
     }
 
     // active piece
@@ -381,8 +415,8 @@ export class TetrisGame extends BaseGame {
       if (this.active.y + c.y >= this.hiddenRows) ctx.fillRect(px, py, this.grid - 1, this.grid - 1);
     }
 
-    // If no sidebar attached, draw a compact preview and stats on canvas
-    if (!this.sidebarEl) {
+    // If no sidebar attached and showNext, draw a compact preview and stats on canvas
+    if (!this.sidebarEl && this.showNext) {
       const previewGrid = Math.max(10, Math.floor(this.grid * 0.85));
       const previewPad = 8;
       const previewX = width - previewGrid * 4 - previewPad;
@@ -409,6 +443,25 @@ export class TetrisGame extends BaseGame {
     }
   }
 
+  // Hold piece logic
+  private hold() {
+    if (this.holdUsedThisDrop) return;
+    const current = this.active.shape;
+    if (this.holdShape == null) {
+      this.holdShape = current;
+      // spawn next immediately
+      const s = this.nextShape; this.nextShape = this.bag.next();
+      const def = getDefinition(s);
+      this.active = { shape: s, cells: def.cells.map(c => ({...c})), x: Math.floor(this.boardW/2), y: 0, color: def.color };
+    } else {
+      const swap = this.holdShape; this.holdShape = current;
+      const def = getDefinition(swap);
+      this.active = { shape: swap, cells: def.cells.map(c => ({...c})), x: Math.floor(this.boardW/2), y: 0, color: def.color };
+    }
+    this.holdUsedThisDrop = true;
+    this.updateSidebar();
+  }
+
   private updateSidebar() {
     if (!this.sidebarEl) return;
     const stats = this.sidebarEl.querySelector('#tetris-stats') as HTMLElement | null;
@@ -424,6 +477,21 @@ export class TetrisGame extends BaseGame {
       const x = cx + c.x*grid - grid/2;
       const y = cy + c.y*grid - grid/2;
       pctx!.fillRect(x, y, grid-4, grid-4);
+    }
+    // Hold canvas (first canvas inside sidebar)
+    const holdCanvas = this.sidebarEl.querySelector('canvas') as HTMLCanvasElement | null;
+    if (holdCanvas) {
+      const hctx = holdCanvas.getContext('2d')!;
+      hctx.clearRect(0,0,holdCanvas.width,holdCanvas.height);
+      if (this.holdShape) {
+        const hdef = getDefinition(this.holdShape);
+        const hg = Math.floor(holdCanvas.width/4);
+        const hx = holdCanvas.width/2, hy = holdCanvas.height/2;
+        hctx.fillStyle = hdef.color;
+        for (const c of hdef.cells) {
+          hctx.fillRect(hx + c.x*hg - hg/2, hy + c.y*hg - hg/2, hg-4, hg-4);
+        }
+      }
     }
   }
 }
