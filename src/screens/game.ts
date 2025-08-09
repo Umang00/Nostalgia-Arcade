@@ -51,7 +51,8 @@ export function initGameRoute(params?: Record<string,string>) {
   const sidebar = document.getElementById('sidebar')!;
   const game = loadGame(id);
   game.init(host);
-  audio.startGameMusic();
+  // Menu loop until Play on splash
+  audio.startMenuMusic();
   // If Tetris exposes sidebar attachment, wire it
   // @ts-ignore - only Tetris implements it
   if (typeof (game as any).attachSidebar === 'function') {
@@ -155,8 +156,23 @@ export function initGameRoute(params?: Record<string,string>) {
   // Controls
   const btnPause = document.getElementById('btnPause') as HTMLButtonElement;
   btnPause.addEventListener('click', () => {
-    if (!paused) { game.pause(); paused = true; btnPause.textContent = 'Resume'; }
-    else { game.resume(); paused = false; btnPause.textContent = 'Pause'; }
+    if (!paused) {
+      game.pause(); paused = true; btnPause.textContent = 'Resume';
+      // Centered pause overlay
+      const overlay = document.getElementById('centerOverlay')!;
+      overlay.innerHTML = `
+        <div style="font-size:18px; font-weight:700; text-align:center; margin-bottom:8px;">Paused</div>
+        <div style="text-align:center; color:#9aa3b2; margin-bottom:8px;">←/→ move · ↑ rotate · ↓ soft drop · Space hard drop</div>
+        <div style="display:flex; gap:8px; justify-content:center;">
+          <button id="btnResume" class="btn">Resume</button>
+        </div>
+      `;
+      overlay.classList.remove('hidden');
+    } else {
+      paused = false; btnPause.textContent = 'Pause';
+      (document.getElementById('centerOverlay')!).classList.add('hidden');
+      game.resume();
+    }
   });
   document.getElementById('btnReset')!.addEventListener('click', () => {
     score = 0; scoreEl.textContent = '0'; paused = false; btnPause.textContent = 'Pause';
@@ -168,12 +184,13 @@ export function initGameRoute(params?: Record<string,string>) {
     score = 0; scoreEl.textContent = '0'; paused = false; btnPause.textContent = 'Pause';
     (document.getElementById('centerOverlay')!).classList.add('hidden');
     game.reset(); game.start();
-    audio.startMusic();
+    audio.startGameMusic();
   };
   // Delegated handler since overlay recreated on each end
   document.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
     if (t && t.id === 'btnPlayAgain') onPlayAgain();
+    if (t && t.id === 'btnResume') { (document.getElementById('centerOverlay')!).classList.add('hidden'); btnPause.textContent = 'Pause'; paused = false; game.resume(); }
   });
   // Splash actions
   document.addEventListener('click', (e) => {
